@@ -226,7 +226,6 @@ mv it-users.zip dc01/files
 cd dc01/files
 ll
 7z x it-users.zip
-q
 ll
 zip2john it-users.zip > it-users.hash
 cat it-users.hash
