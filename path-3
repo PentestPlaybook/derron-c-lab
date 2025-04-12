@@ -20,6 +20,8 @@ sudo OpenVPN *.ovpn
 
 --------------------------------------
 
+File Upload Testing
+
 cd Desktop/ad/ms01
 mkdir enu files loot exploits
 touch creds users passwords hashes
