@@ -296,7 +296,7 @@ cat proof.txt
 
 Web App Enumeration:
 
-Go to: http://ms01
+firefox http://ms01
 
 It redirects to: "http://ms01/dashboard/" XAMPP Apache
 
