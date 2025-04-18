@@ -238,8 +238,13 @@ start
 
 ping -c 2 10.10.1.200
 (It is best practice to ping the domain controller because it should have ICMP ports open)
+
 ping -c 2 10.10.1.202
 (Unsuccessful. Firewall must be on.)
+
+--------------------------------------------------------------------------------------------
+
+PIVOTING:
 
 Open a command prompt (in the GUI session) with Administrator access:
 whoami /all
