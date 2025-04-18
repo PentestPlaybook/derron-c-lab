@@ -259,6 +259,7 @@ dir /s/b c:\*.zip
 dir /s/b c:\*.doc*
 whoami /all
 dir /A C:\$Recycle.Bin\
+(Or, in PowerShell: Get-ChildItem -Force 'C:\$Recycle.Bin')
 dir /A C:\$Recycle.Bin\S-1-5-21-3902119089-3194977123-834544202-1003\
 type /A C:\$Recycle.Bin\S-1-5-21-3902119089-3194977123-834544202-1003\$I8I1KV.doc
 (We find that Stuart deleted a file named "welcome letter.doc")
