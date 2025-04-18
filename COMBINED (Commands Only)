@@ -28,6 +28,7 @@ sudo nmap -T4 -p80,443,1978-1980 -sCV -v ms01 -oN enu/nmap-services.log
 cd Desktop/ad_lab/ms01
 gobuster dir -u http://ms01 -w /usr/share/dirb/wordlists/common.txt | tee enu/gobuster-p80.log
 gobuster dir -u http://ms01 -w /usr/share/dirb/wordlists/common.txt
+firefox http://ms01/uploads
 mv ~/Downloads/file.exe .
 exiftool file.exe
 
