@@ -46,7 +46,7 @@ sudo nmap -T4 -p80,443,1978-1980 -sCV -v ms01 -oN enu/nmap-services.log
 - Note: Create a script to find patterns that appear across multiple ports
 -----------------------------------------------------------------------------------
 
-Directory Brute Forcing:
+Web App Enumeration:
 
 cd Desktop/ad_lab/ms01
 gobuster dir -u http://ms01 -w /usr/share/dirb/wordlists/common.txt | tee enu/gobuster-p80.log
@@ -58,10 +58,21 @@ gobuster dir -u http://ms01 -w /usr/share/dirb/wordlists/common.txt
 Open all the pages that exist and don't give a 403.
 
 We have an uploads directory (Status: 301).
-Go to: ms01/uploads, download any files and view the metadata.
-- mv ~/Downloads/file.exe .
-- exiftool file.exe (Look for software names/version numbers)
+
+Go to: ms01/uploads, 
+
+Download any files and view the metadata.
+mv ~/Downloads/file.exe .
+exiftool file.exe (Look for software names/version numbers)
 --- We found Remote Mouse 3.008
+
+firefox http://ms01
+It redirects to: "http://ms01/dashboard/" XAMPP Apache
+
+firefox http://ms01/phpMyAdmin/
+(Even if you get a code 403 (Forbidden), the page may tell you the apache version and open ssl version).
+
+firefox ms01/dashboard/phpinfo.php for more information about the application stack, including the DOCUMENT_ROOT
 
 ---------------------------------------------------------------------------------
 
@@ -294,15 +305,3 @@ exit
 mv proof.txt ../../dc01/loot
 cd ../../dc01/loot
 cat proof.txt
--------------------------------------------------------------------
-
-Web App Enumeration:
-
-firefox http://ms01
-
-It redirects to: "http://ms01/dashboard/" XAMPP Apache
-
-Go to ms01/phpMyAdmin/
-(Even if you get a code 403 (Forbidden), the page may tell you the apache version and open ssl version).
-
-Go to ms01/dashboard/phpinfo.php, for more information about the application stack, including the DOCUMENT_ROOT
