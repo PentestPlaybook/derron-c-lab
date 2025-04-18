@@ -31,6 +31,10 @@ gobuster dir -u http://ms01 -w /usr/share/dirb/wordlists/common.txt
 mv ~/Downloads/file.exe .
 exiftool file.exe
 
+firefox http://ms01
+firefox http://ms01/phpMyAdmin/
+firefox http://ms01/dashboard/phpinfo.php
+
 searchsploit remote mouse 3.008
 cd ../exploits
 searchsploit -x 46697
@@ -188,11 +192,6 @@ exit
 mv proof.txt ../../dc01/loot
 cd ../../dc01/loot
 cat proof.txt
-
-firefox http://ms01
-firefox http://ms01/phpMyAdmin/
-firefox http://ms01/dashboard/phpinfo.php
-
 
 ----------------------------------------- PATH 2 ---------------------------------------------------
 
